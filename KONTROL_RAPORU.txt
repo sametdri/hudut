@@ -1,0 +1,17 @@
+v5.0 Kontrol Raporu
+
+index.html SQL içeriyor mu: HAYIR
+app.js syntax: OK
+
+
+routes.js syntax: OK
+
+
+Dosya yapısı:
+- index.html
+- .nojekyll
+- assets/app.js
+- assets/style.css
+- assets/routes.js
+- assets/logo.jpeg
+- supabase/schema.sql

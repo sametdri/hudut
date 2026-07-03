@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hudut Şantiye Yönetim Sistemi</title>
+  <link rel="stylesheet" href="assets/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+  <button id="globalEditBtn" class="globalEditBtn" type="button" title="Düzenleme Kilidi">🔑</button>
+
+  <div id="globalEditModal" class="globalEditModal">
+    <div class="globalEditBox">
+      <h3>Düzenleme Yetkisi</h3>
+      <p>İmalat miktarları, genel bilgiler ve MBD üretim kayıtlarını değiştirmek için şifre gir.</p>
+      <input id="globalEditPassword" type="password" placeholder="Şifre">
+      <div class="globalEditActions">
+        <button id="globalUnlockBtn" type="button">Kilidi Aç</button>
+        <button id="globalLockBtn" class="danger" type="button">Kilitle</button>
+        <button id="globalCloseBtn" class="danger" type="button">Kapat</button>
+      </div>
+      <span id="globalEditState" class="authStatus"></span>
+    </div>
+  </div>
+  <aside class="sidebar">
+    <div class="logoBox"><img src="assets/logo.jpeg" alt="Logo"></div>
+    <nav class="sideNav">
+      <a class="active" href="#overview">▣ Genel Bakış</a>
+      <a href="#mapSection">▱ Güzergâh</a>
+      <a href="#worksSection">▧ İmalat</a>
+      <a href="#photoUpload">▧ Fotoğraf Yükle</a>
+      <a href="#photoSection">▤ Km Fotoğrafları</a>
+    </nav>
+    <div class="sideFooter"><span>© 2026</span><strong>Hudut Şantiye Yönetim Sistemi</strong></div>
+  </aside>
+
+  <main class="content">
+    <header class="topbar">
+      <div>
+        <h1>HUDUT ŞANTİYE YÖNETİM SİSTEMİ</h1>
+        <p>Kurulum gerektirmeyen çift tıkla çalışan saha takip sistemi</p>
+      </div>
+      <div class="topInfo">
+        <span id="todayText"></span><span id="cloudStatus" class="topEditIndicator">☁️ Bulut bağlı</span><span id="topEditIndicator" class="topEditIndicator">🔒 Görüntüleme modu</span>
+        <button id="exportBtn">Verileri Dışa Aktar</button>
+      </div>
+    </header>
+
+    <div id="cloudErrorBox" class="cloudErrorBox" style="display:none"></div>
+
+    <nav class="stageTabs five" id="stageTabs"></nav>
+
+
+    <section id="productionDashboard" class="productionOnly">
+      <section class="panel">
+        <h2><span></span>MBD Üretim Merkezi</h2>
+        <div class="productionGrid" id="productionStats"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panelHead">
+          <h2><span></span>Günlük MBD Üretim Girişi</h2>
+          <div class="authBox hiddenAuth">
+            <span id="prodEditStatus" class="lockBadge">Üretim girişi kilitli</span>
+            <input id="prodPassword" type="password" placeholder="Şifre">
+            <button id="prodUnlockBtn" class="smallBtn" type="button">Kilidi Aç</button>
+            <button id="prodLockBtn" class="smallBtn danger" type="button">Kilitle</button>
+          </div>
+        </div>
+        <form id="productionForm" class="productionForm noShift">
+          <label>Tarih
+            <input id="prodDate" type="date" required>
+          </label>
+          <label>Bugün Üretilen
+            <input id="prodCount" type="number" min="0" placeholder="Örn: 125" required>
+          </label>
+          <label>Not
+            <input id="prodNote" placeholder="Örn: Kalıp değişimi yapıldı">
+          </label>
+          <button id="prodSaveBtn" type="submit">Kaydet</button>
+        </form>
+        <p class="hint">Tarih alanından geçmiş günlere de üretim ekleyebilirsin. Bu bölüm 5-6-7-8 etaba ortak santral MBD üretimini takip eder.</p>
+      </section>
+
+      <section class="dashGrid">
+        <div class="panel">
+          <h2><span></span>Günlük Üretim Grafiği</h2>
+          <div id="productionChart" class="chartBox"></div>
+        </div>
+        <div class="panel noteBox">
+          <h2><span></span>Genel Üretim Notu</h2>
+          <textarea id="productionGeneralNote" placeholder="Santral, kalıp, stok, sevkiyat veya üretimle ilgili genel not..."></textarea>
+          <br><br>
+          <button id="saveProductionNote">Notu Kaydet</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panelHead">
+          <h2><span></span>Gün Gün MBD Üretim Çizelgesi</h2>
+          <button id="clearProductionBtn" class="smallBtn danger">Üretim Kayıtlarını Sil</button>
+        </div>
+        <div class="tableWrap">
+          <table class="prodTable">
+            <thead>
+              <tr>
+                <th>Tarih</th>
+                <th>Üretim</th>
+                <th>Kümülatif</th>
+                <th>Not</th>
+                <th>İşlem</th>
+              </tr>
+            </thead>
+            <tbody id="productionTable"></tbody>
+          </table>
+        </div>
+        <div class="paginationBox">
+          <span id="productionPageInfo" class="tableSummary"></span>
+          <button id="productionPrevPage" class="smallBtn" type="button">Önceki</button>
+          <button id="productionNextPage" class="smallBtn" type="button">Sonraki</button>
+        </div>
+      </section>
+    </section>
+
+
+    <section id="overview" class="panel stageOnly">
+      <div class="panelHead">
+        <h2><span></span><b id="stageTitle">Etap</b> Genel Bilgiler</h2>
+        <span id="stageInfoEditStatus" class="lockBadge">Genel bilgi düzenleme kilitli</span>
+      </div>
+      <div class="statGrid" id="stageMeta"></div>
+
+      <form id="stageInfoForm" class="stageInfoEdit">
+        <label>Toplam Uzunluk / m
+          <input id="editLength" type="number" min="0" placeholder="Örn: 16700">
+        </label>
+        <button id="saveStageInfoBtn" type="submit">Genel Bilgileri Kaydet</button>
+      </form>
+    </section>
+
+    <section class="dashGrid stageOnly">
+      <div id="worksSection" class="panel">
+        <div class="panelHead">
+          <h2><span></span>İmalat İlerleme Durumu</h2>
+          <div class="authBox hiddenAuth">
+            <span id="editStatus" class="lockBadge">Miktar güncelleme kilitli</span>
+            <input id="editPassword" type="password" placeholder="Şifre">
+            <button id="unlockBtn" class="smallBtn" type="button">Kilidi Aç</button>
+            <button id="lockBtn" class="smallBtn danger" type="button">Kilitle</button>
+            <button id="resetBtn" class="smallBtn danger">Verileri Sıfırla</button>
+          </div>
+        </div>
+        <div class="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th>İmalat Türü</th><th>Toplam</th><th>Yapılan</th><th>Kalan</th><th>İlerleme</th>
+              </tr>
+            </thead>
+            <tbody id="worksTable"></tbody>
+          </table>
+        </div>
+        <div class="saveAllBox">
+          <button id="saveAllProgressBtn" type="button">💾 Tüm Değişiklikleri Kaydet</button>
+          <span id="saveAllStatus" class="authStatus"></span>
+        </div>
+      </div>
+
+      <div id="mapSection" class="panel">
+        <div class="panelHead">
+          <h2><span></span><b id="mapStageName"></b> Güzergâh Haritası</h2>
+          <div class="mapTools">
+            <label class="check"><input type="checkbox" id="showKmLabels" checked> Km yazıları</label>
+            <label class="check"><input type="checkbox" id="showPhotos" checked> Fotoğraflar</label>
+            <div class="mapStatus" id="mapStatus">Yükleniyor...</div>
+          </div>
+        </div>
+        <div id="map"></div>
+      </div>
+    </section>
+
+    <section id="photoUpload" class="panel stageOnly">
+      <h2><span></span>Fotoğraf Yükle ve Km'ye Bağla</h2>
+      <form id="photoForm" class="uploadGrid">
+        <label>Etap<select id="photoStage"></select></label>
+        <label>Kilometre<input id="km" placeholder="Örn: 402+350" required></label>
+        <label class="kmSelectWrap">KMZ Noktası
+          <select id="kmPointSelect">
+            <option value="">Önce km gir</option>
+          </select>
+        </label>
+        <label>İmalat Türü<select id="workType"></select></label>
+        <label>Açıklama<input id="note" placeholder="Örn: MBD montajı tamamlandı"></label>
+        <label>Fotoğraf<input id="photo" type="file" accept="image/*" required></label>
+        <button type="submit" id="savePhotoBtn">Fotoğrafı Kaydet</button>
+      </form>
+      <p class="hint">Fotoğraf yüklenirken küçültülür ve tarayıcı veritabanına kaydedilir. GPS kullanılmaz.</p>
+    </section>
+
+    <section id="photoSection" class="panel stageOnly">
+      <div class="panelHead">
+        <h2><span></span>Km Bazlı Fotoğraf Kayıtları</h2>
+        <input id="photoSearch" class="searchInput" placeholder="Km veya imalat ara...">
+      </div>
+      <div id="photoList" class="photoGrid"></div>
+    </section>
+
+    <footer class="footer">Versiyon 5.0 — Temiz bulut final</footer>
+  </main>
+  <div id="toast" class="toast"></div>
+
+  <div class="previewModal" id="previewModal">
+    <div class="previewInner">
+      <img id="previewImage" alt="Fotoğraf önizleme">
+      <div class="previewInfo">
+        <div id="previewText"></div>
+        <button id="closePreview">Kapat</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/routes.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>
